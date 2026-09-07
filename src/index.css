@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-bg text-fg font-mono antialiased;
+    font-feature-settings: 'ss01', 'ss02', 'cv01';
+    background-image:
+      radial-gradient(ellipse 1200px 600px at 80% -10%, rgba(34, 197, 94, 0.06), transparent 60%),
+      radial-gradient(ellipse 800px 400px at 0% 100%, rgba(34, 197, 94, 0.04), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    @apply bg-accent-dark text-fg;
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-border-strong;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  input,
+  textarea,
+  select {
+    @apply bg-bg-elevated border border-border rounded-md px-3 py-2 text-sm text-fg
+           placeholder:text-fg-subtle outline-none transition-colors;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    @apply border-accent-dark;
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1);
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator {
+    filter: invert(0.7) sepia(0.4) saturate(2) hue-rotate(80deg);
+    cursor: pointer;
+  }
+
+  input[type='checkbox'] {
+    @apply appearance-none w-4 h-4 rounded border border-border-strong bg-bg-elevated cursor-pointer
+           transition-all relative;
+    padding: 0;
+  }
+
+  input[type='checkbox']:checked {
+    @apply bg-accent border-accent;
+  }
+
+  input[type='checkbox']:checked::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid #0a0f0d;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+}
+
+@layer utilities {
+  .grain::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.02;
+    z-index: 100;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  }
+
+  .text-glow {
+    text-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
+  }
+}
