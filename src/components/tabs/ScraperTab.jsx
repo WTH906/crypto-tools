@@ -16,7 +16,7 @@ function formatDate(val) {
 
 export default function ScraperTab({ scraper, onToast }) {
   const {
-    projects, loading, scanning, sortBy, sortDir, showDeleted,
+    projects, loading, scanning, scanProgress, sortBy, sortDir, showDeleted,
     handleSort, setShowDeleted,
     scanCryptoRank, scanICO, updateProject, deleteProject, restoreProject, sendToResearch,
   } = scraper
@@ -27,7 +27,7 @@ export default function ScraperTab({ scraper, onToast }) {
   const threeMonthsAgo = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10)
   const [dateFrom, setDateFrom] = useState(threeMonthsAgo)
   const [dateTo, setDateTo] = useState(today)
-  const [maxPages, setMaxPages] = useState(3)
+  const [maxPages, setMaxPages] = useState(10)
 
   const handleTokenChange = (val) => {
     setToken(val)
@@ -129,7 +129,7 @@ export default function ScraperTab({ scraper, onToast }) {
                        hover:bg-accent-dark/30 disabled:opacity-40 disabled:pointer-events-none transition-colors"
           >
             <RefreshCw size={12} className={scanning === 'cr' ? 'animate-spin' : ''} />
-            {scanning === 'cr' ? 'Scanning...' : 'CryptoRank'}
+            {scanning === 'cr' && scanProgress ? `Page ${scanProgress.page}/${scanProgress.maxPages}` : scanning === 'cr' ? 'Scanning...' : 'CryptoRank'}
           </button>
           <button
             onClick={handleScanICO}
@@ -139,7 +139,7 @@ export default function ScraperTab({ scraper, onToast }) {
                        hover:text-fg hover:border-border-strong disabled:opacity-40 disabled:pointer-events-none transition-colors"
           >
             <RefreshCw size={12} className={scanning === 'ico' ? 'animate-spin' : ''} />
-            {scanning === 'ico' ? 'Scanning...' : 'ICO Analytics'}
+            {scanning === 'ico' && scanProgress ? `Page ${scanProgress.page}/${scanProgress.maxPages}` : scanning === 'ico' ? 'Scanning...' : 'ICO Analytics'}
           </button>
         </div>
 

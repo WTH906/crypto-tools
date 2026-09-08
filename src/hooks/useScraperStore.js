@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
+const DELAY_MS = 1500
+
 export default function useScraperStore() {
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [scanning, setScanning] = useState(null)
+  const [scanProgress, setScanProgress] = useState(null)
   const [error, setError] = useState(null)
   const [sortBy, setSortBy] = useState('funding_date')
   const [sortDir, setSortDir] = useState('desc')
@@ -67,50 +70,93 @@ export default function useScraperStore() {
 
   const scanCryptoRank = async (token, dateFrom, dateTo, maxPages) => {
     setScanning('cr')
+    setScanProgress(null)
+    let totalInserted = 0, totalUpdated = 0, totalFetched = 0, totalErrors = 0
+    let skip = 0
+    let warning = null
+
     try {
-      const resp = await fetch('/api/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bearer_token: token,
-          date_from: dateFrom,
-          date_to: dateTo,
-          max_pages: maxPages,
-        }),
-      })
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}))
-        throw new Error(err.error || resp.statusText)
+      for (let page = 1; page <= maxPages; page++) {
+        setScanProgress({ page, maxPages })
+
+        const resp = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bearer_token: token,
+            date_from: dateFrom,
+            date_to: dateTo,
+            skip,
+          }),
+        })
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}))
+          throw new Error(err.error || resp.statusText)
+        }
+        const result = await resp.json()
+        totalFetched += result.fetched || 0
+        totalInserted += result.inserted || 0
+        totalUpdated += result.updated || 0
+        totalErrors += result.errors || 0
+        if (result.warning) warning = result.warning
+
+        if (!result.has_more || result.warning) break
+        skip = result.next_skip
+
+        if (page < maxPages) {
+          await new Promise(r => setTimeout(r, DELAY_MS))
+        }
       }
-      const result = await resp.json()
       await loadProjects()
-      return result
+      return { fetched: totalFetched, inserted: totalInserted, updated: totalUpdated, errors: totalErrors, warning }
     } finally {
       setScanning(null)
+      setScanProgress(null)
     }
   }
 
   const scanICO = async (dateFrom, dateTo, maxPages) => {
     setScanning('ico')
+    setScanProgress(null)
+    let totalInserted = 0, totalUpdated = 0, totalMerged = 0, totalFetched = 0, totalErrors = 0
+    let warning = null
+
     try {
-      const resp = await fetch('/api/scan_ico', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date_from: dateFrom,
-          date_to: dateTo,
-          max_pages: maxPages,
-        }),
-      })
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}))
-        throw new Error(err.error || resp.statusText)
+      for (let page = 1; page <= maxPages; page++) {
+        setScanProgress({ page, maxPages })
+
+        const resp = await fetch('/api/scan_ico', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            date_from: dateFrom,
+            date_to: dateTo,
+            page,
+          }),
+        })
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}))
+          throw new Error(err.error || resp.statusText)
+        }
+        const result = await resp.json()
+        totalFetched += result.fetched || 0
+        totalInserted += result.inserted || 0
+        totalUpdated += result.updated || 0
+        totalMerged += result.merged || 0
+        totalErrors += result.errors || 0
+        if (result.warning) warning = result.warning
+
+        if (!result.has_more || result.warning) break
+
+        if (page < maxPages) {
+          await new Promise(r => setTimeout(r, DELAY_MS))
+        }
       }
-      const result = await resp.json()
       await loadProjects()
-      return result
+      return { fetched: totalFetched, inserted: totalInserted, updated: totalUpdated, merged: totalMerged, errors: totalErrors, warning }
     } finally {
       setScanning(null)
+      setScanProgress(null)
     }
   }
 
@@ -154,7 +200,7 @@ export default function useScraperStore() {
   }
 
   return {
-    projects, loading, scanning, error,
+    projects, loading, scanning, scanProgress, error,
     sortBy, sortDir, showDeleted,
     handleSort, setShowDeleted,
     loadProjects, updateProject, deleteProject, restoreProject,

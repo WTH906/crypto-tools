@@ -17,28 +17,32 @@ def get_db():
     return Database(url, key)
 
 
-async def run_scan(db, bearer_token, date_from, date_to, max_pages):
+async def run_scan(db, bearer_token, date_from, date_to, skip=0):
     scraper = CryptoRankScraper(bearer_token)
     inserted = updated = errors = fetched = 0
 
     try:
-        async for batch in scraper.fetch_funding_rounds_stream(date_from, date_to, max_pages=max_pages):
-            fetched += len(batch)
-            for project in batch:
-                try:
-                    if db.upsert_project(project):
-                        inserted += 1
-                    else:
-                        updated += 1
-                except Exception:
-                    errors += 1
+        projects, has_more, next_skip = await scraper.fetch_page(date_from, date_to, skip=skip)
+        fetched = len(projects)
+        for project in projects:
+            try:
+                if db.upsert_project(project):
+                    inserted += 1
+                else:
+                    updated += 1
+            except Exception:
+                errors += 1
     except Exception as e:
         return {
             "fetched": fetched, "inserted": inserted, "updated": updated,
-            "errors": errors, "warning": f"Scan interrupted: {e}",
+            "errors": errors, "has_more": False, "next_skip": skip,
+            "warning": str(e),
         }
 
-    return {"fetched": fetched, "inserted": inserted, "updated": updated, "errors": errors}
+    return {
+        "fetched": fetched, "inserted": inserted, "updated": updated,
+        "errors": errors, "has_more": has_more, "next_skip": next_skip,
+    }
 
 
 class handler(BaseHTTPRequestHandler):
@@ -60,7 +64,7 @@ class handler(BaseHTTPRequestHandler):
             db, token,
             body.get('date_from', '2024-01-01'),
             body.get('date_to', '2099-12-31'),
-            body.get('max_pages', 10),
+            skip=body.get('skip', 0),
         ))
 
         self._json(200, result)

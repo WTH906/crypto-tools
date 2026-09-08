@@ -16,55 +16,50 @@ class CryptoRankScraper:
             "Authorization": f"Bearer {bearer_token}",
         }
 
-    async def fetch_funding_rounds_stream(self, date_from, date_to, max_pages=10):
+    async def fetch_page(self, date_from, date_to, skip=0):
         dt_from = datetime.strptime(date_from, "%Y-%m-%d")
         dt_to = datetime.strptime(date_to, "%Y-%m-%d")
-        skip = 0
 
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-            for page in range(1, max_pages + 1):
-                payload = {
-                    "limit": self.PAGE_SIZE,
-                    "filters": {},
-                    "skip": skip,
-                    "sortingColumn": "date",
-                    "sortingDirection": "DESC",
-                }
+            payload = {
+                "limit": self.PAGE_SIZE,
+                "filters": {},
+                "skip": skip,
+                "sortingColumn": "date",
+                "sortingDirection": "DESC",
+            }
 
-                resp = await client.post(self.API_URL, headers=self.headers, json=payload)
+            resp = await client.post(self.API_URL, headers=self.headers, json=payload)
 
-                if resp.status_code == 401:
-                    raise Exception("Token expired or invalid.")
-                if resp.status_code not in (200, 201):
-                    raise Exception(f"HTTP {resp.status_code}: {resp.text[:300]}")
+            if resp.status_code == 401:
+                raise Exception("Token expired or invalid.")
+            if resp.status_code not in (200, 201):
+                raise Exception(f"HTTP {resp.status_code}: {resp.text[:300]}")
 
-                body = resp.json()
-                items = body.get("data", [])
-                total = body.get("total", 0)
+            body = resp.json()
+            items = body.get("data", [])
+            total = body.get("total", 0)
 
-                if not items:
-                    break
+            if not items:
+                return [], False, skip
 
-                page_projects = []
-                oldest_on_page = None
-                for item in items:
-                    project = self._normalize(item)
-                    p_date = project.pop("_parsed_date", None)
-                    if p_date is not None:
-                        if oldest_on_page is None or p_date < oldest_on_page:
-                            oldest_on_page = p_date
-                        if p_date < dt_from or p_date > dt_to:
-                            continue
-                    page_projects.append(project)
+            projects = []
+            stop_early = False
+            for item in items:
+                project = self._normalize(item)
+                p_date = project.pop("_parsed_date", None)
+                if p_date is not None:
+                    if p_date < dt_from:
+                        stop_early = True
+                        continue
+                    if p_date > dt_to:
+                        continue
+                projects.append(project)
 
-                if page_projects:
-                    yield page_projects
+            next_skip = skip + self.PAGE_SIZE
+            has_more = not stop_early and next_skip < total
 
-                if oldest_on_page and oldest_on_page < dt_from:
-                    break
-                if skip + self.PAGE_SIZE >= total:
-                    break
-                skip += self.PAGE_SIZE
+            return projects, has_more, next_skip
 
     def _normalize(self, item):
         key = item.get("key", item.get("slug", ""))

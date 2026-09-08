@@ -17,32 +17,36 @@ def get_db():
     return Database(url, key)
 
 
-async def run_scan(db, date_from, date_to, max_pages):
+async def run_scan(db, date_from, date_to, page=1):
     scraper = ICOAnalyticsScraper()
     inserted = updated = merged = errors = fetched = 0
 
     try:
-        async for batch in scraper.fetch_funding_rounds_stream(date_from, date_to, max_pages=max_pages):
-            fetched += len(batch)
-            for project in batch:
-                try:
-                    match_key = db.find_matching_project(project.get("name", ""))
-                    if match_key:
-                        db.merge_project(match_key, project)
-                        merged += 1
-                    elif db.upsert_project(project):
-                        inserted += 1
-                    else:
-                        updated += 1
-                except Exception:
-                    errors += 1
+        projects, has_more = await scraper.fetch_page(date_from, date_to, page=page)
+        fetched = len(projects)
+        for project in projects:
+            try:
+                match_key = db.find_matching_project(project.get("name", ""))
+                if match_key:
+                    db.merge_project(match_key, project)
+                    merged += 1
+                elif db.upsert_project(project):
+                    inserted += 1
+                else:
+                    updated += 1
+            except Exception:
+                errors += 1
     except Exception as e:
         return {
             "fetched": fetched, "inserted": inserted, "updated": updated,
-            "merged": merged, "errors": errors, "warning": f"Scan interrupted: {e}",
+            "merged": merged, "errors": errors, "has_more": False,
+            "warning": str(e),
         }
 
-    return {"fetched": fetched, "inserted": inserted, "updated": updated, "merged": merged, "errors": errors}
+    return {
+        "fetched": fetched, "inserted": inserted, "updated": updated,
+        "merged": merged, "errors": errors, "has_more": has_more,
+    }
 
 
 class handler(BaseHTTPRequestHandler):
@@ -59,7 +63,7 @@ class handler(BaseHTTPRequestHandler):
             db,
             body.get('date_from', '2024-01-01'),
             body.get('date_to', '2099-12-31'),
-            body.get('max_pages', 10),
+            page=body.get('page', 1),
         ))
 
         self._json(200, result)

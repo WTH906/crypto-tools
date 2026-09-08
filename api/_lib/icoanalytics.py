@@ -11,40 +11,38 @@ class ICOAnalyticsScraper:
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     }
 
-    async def fetch_funding_rounds_stream(self, date_from, date_to, max_pages=10):
+    async def fetch_page(self, date_from, date_to, page=1):
         dt_from = datetime.strptime(date_from, "%Y-%m-%d")
         dt_to = datetime.strptime(date_to, "%Y-%m-%d")
 
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-            for page in range(1, max_pages + 1):
-                url = self.BASE_URL if page == 1 else f"{self.BASE_URL}page/{page}/"
-                resp = await client.get(url, headers=self.HEADERS)
+            url = self.BASE_URL if page == 1 else f"{self.BASE_URL}page/{page}/"
+            resp = await client.get(url, headers=self.HEADERS)
 
-                if resp.status_code == 404:
-                    break
-                if resp.status_code != 200:
-                    raise Exception(f"HTTP {resp.status_code} on page {page}")
+            if resp.status_code == 404:
+                return [], False
+            if resp.status_code != 200:
+                raise Exception(f"HTTP {resp.status_code} on page {page}")
 
-                projects = self._parse_page(resp.text)
-                if not projects:
-                    break
+            all_projects = self._parse_page(resp.text)
+            if not all_projects:
+                return [], False
 
-                page_projects = []
-                oldest_on_page = None
-                for p in projects:
-                    p_date = p.pop("_parsed_date", None)
-                    if p_date is not None:
-                        if oldest_on_page is None or p_date < oldest_on_page:
-                            oldest_on_page = p_date
-                        if p_date < dt_from or p_date > dt_to:
-                            continue
-                    page_projects.append(p)
+            projects = []
+            stop_early = False
+            for p in all_projects:
+                p_date = p.pop("_parsed_date", None)
+                if p_date is not None:
+                    if p_date < dt_from:
+                        stop_early = True
+                        continue
+                    if p_date > dt_to:
+                        continue
+                projects.append(p)
 
-                if page_projects:
-                    yield page_projects
+            has_more = not stop_early and len(all_projects) > 0
 
-                if oldest_on_page and oldest_on_page < dt_from:
-                    break
+            return projects, has_more
 
     def _parse_page(self, html):
         soup = BeautifulSoup(html, "html.parser")
