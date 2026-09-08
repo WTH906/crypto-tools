@@ -249,7 +249,8 @@ function ProjectRow({ project: p, onUpdate, onDelete, onRestore, onSend }) {
       <td className="px-3 py-2.5 max-w-[200px]">
         <div className="flex items-center gap-2">
           {p.logo_url && (
-            <img src={p.logo_url} alt="" className="w-5 h-5 rounded shrink-0" />
+            <img src={p.logo_url} alt="" className="w-5 h-5 rounded shrink-0"
+              onError={e => { e.target.style.display = 'none' }} />
           )}
           <div className="min-w-0">
             <a
