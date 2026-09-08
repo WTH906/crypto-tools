@@ -27,7 +27,7 @@ export default function ScraperTab({ scraper, onToast }) {
   const threeMonthsAgo = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10)
   const [dateFrom, setDateFrom] = useState(threeMonthsAgo)
   const [dateTo, setDateTo] = useState(today)
-  const [maxPages, setMaxPages] = useState(10)
+  const [maxPages, setMaxPages] = useState(3)
 
   const handleTokenChange = (val) => {
     setToken(val)
