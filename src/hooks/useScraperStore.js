@@ -188,7 +188,7 @@ export default function useScraperStore() {
     const { error: err } = await supabase.from('research').insert({
       cryptorank_key: project.key,
       name: project.name || '',
-      category: project.category || '',
+      category: (typeof project.category === 'object' ? project.category?.name : project.category) || '',
       last_fund_date: project.funding_date || null,
       link: project.cryptorank_url || '',
       short_description: investorNames,

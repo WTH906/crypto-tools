@@ -263,7 +263,7 @@ function ProjectRow({ project: p, onUpdate, onDelete, onRestore, onSend }) {
             </a>
             <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-fg-subtle">
               {p.symbol && <span className="text-fg-muted">{p.symbol}</span>}
-              {p.category && <span>{p.category}</span>}
+              {p.category && <span>{typeof p.category === 'object' ? p.category.name || '' : p.category}</span>}
             </div>
           </div>
         </div>

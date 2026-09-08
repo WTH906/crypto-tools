@@ -130,13 +130,25 @@ class CryptoRankScraper:
         if funding_date_str:
             funding_round["date"] = funding_date_str
 
+        cat = item.get("categoryName") or item.get("category", "")
+        if isinstance(cat, dict):
+            cat = cat.get("name") or cat.get("value") or ""
+
+        item_type = item.get("type", "no-token")
+        if isinstance(item_type, dict):
+            item_type = item_type.get("name") or item_type.get("value") or "no-token"
+
+        life_cycle = item.get("lifeCycle", "funding")
+        if isinstance(life_cycle, dict):
+            life_cycle = life_cycle.get("name") or life_cycle.get("value") or "funding"
+
         return {
             "key": key,
             "name": name,
             "symbol": item.get("symbol"),
-            "type": item.get("type", "no-token"),
-            "lifeCycle": item.get("lifeCycle", "funding"),
-            "categoryName": item.get("categoryName") or item.get("category", ""),
+            "type": item_type,
+            "lifeCycle": life_cycle,
+            "categoryName": cat,
             "tagNames": tags,
             "fundingRound": funding_round,
             "funds": funds,
