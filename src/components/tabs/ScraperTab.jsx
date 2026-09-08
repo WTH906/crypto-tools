@@ -38,7 +38,7 @@ export default function ScraperTab({ scraper, onToast }) {
     if (!token) { onToast('Paste your Bearer token first', 'error'); return }
     try {
       const r = await scanCryptoRank(token, dateFrom, dateTo, maxPages)
-      let msg = `CR: ${r.fetched} rounds — ${r.inserted} new, ${r.updated} updated`
+      let msg = `CR: ${r.scanned || r.fetched} scanned, ${r.fetched} in range — ${r.inserted} new, ${r.updated} updated`
       if (r.errors) msg += `, ${r.errors} errors`
       if (r.warning) msg += `. ⚠ ${r.warning}`
       onToast(msg, r.warning ? 'info' : 'success')

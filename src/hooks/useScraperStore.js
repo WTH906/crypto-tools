@@ -71,7 +71,7 @@ export default function useScraperStore() {
   const scanCryptoRank = async (token, dateFrom, dateTo, maxPages) => {
     setScanning('cr')
     setScanProgress(null)
-    let totalInserted = 0, totalUpdated = 0, totalFetched = 0, totalErrors = 0
+    let totalInserted = 0, totalUpdated = 0, totalFetched = 0, totalErrors = 0, totalScanned = 0
     let skip = 0
     let warning = null
 
@@ -98,6 +98,7 @@ export default function useScraperStore() {
         totalInserted += result.inserted || 0
         totalUpdated += result.updated || 0
         totalErrors += result.errors || 0
+        totalScanned += result.scanned || 0
         if (result.warning) warning = result.warning
 
         if (!result.has_more || result.warning) break
@@ -108,7 +109,7 @@ export default function useScraperStore() {
         }
       }
       await loadProjects()
-      return { fetched: totalFetched, inserted: totalInserted, updated: totalUpdated, errors: totalErrors, warning }
+      return { fetched: totalFetched, inserted: totalInserted, updated: totalUpdated, errors: totalErrors, scanned: totalScanned, warning }
     } finally {
       setScanning(null)
       setScanProgress(null)

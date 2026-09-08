@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 class CryptoRankScraper:
     API_URL = "https://api.cryptorank.io/v0/funding-rounds-v2/exclusive"
-    PAGE_SIZE = 20
+    PAGE_SIZE = 100
 
     def __init__(self, bearer_token: str):
         self.headers = {
@@ -19,16 +19,11 @@ class CryptoRankScraper:
     async def fetch_page(self, date_from, date_to, skip=0):
         dt_from = datetime.strptime(date_from, "%Y-%m-%d")
         dt_to = datetime.strptime(date_to, "%Y-%m-%d")
-        ts_from = int(dt_from.replace(tzinfo=timezone.utc).timestamp() * 1000)
-        ts_to = int(dt_to.replace(hour=23, minute=59, second=59, tzinfo=timezone.utc).timestamp() * 1000)
 
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             payload = {
                 "limit": self.PAGE_SIZE,
-                "filters": {
-                    "dateFrom": ts_from,
-                    "dateTo": ts_to,
-                },
+                "filters": {},
                 "skip": skip,
                 "sortingColumn": "date",
                 "sortingDirection": "DESC",
@@ -46,7 +41,7 @@ class CryptoRankScraper:
             total = body.get("total", 0)
 
             if not items:
-                return [], False, skip
+                return [], False, skip, 0
 
             projects = []
             stop_early = False
@@ -64,7 +59,7 @@ class CryptoRankScraper:
             next_skip = skip + self.PAGE_SIZE
             has_more = not stop_early and next_skip < total
 
-            return projects, has_more, next_skip
+            return projects, has_more, next_skip, len(items)
 
     def _normalize(self, item):
         key = item.get("key", item.get("slug", ""))

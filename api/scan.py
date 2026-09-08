@@ -21,8 +21,9 @@ async def run_scan(db, bearer_token, date_from, date_to, skip=0):
     scraper = CryptoRankScraper(bearer_token)
     inserted = updated = errors = fetched = 0
 
+    scanned = 0
     try:
-        projects, has_more, next_skip = await scraper.fetch_page(date_from, date_to, skip=skip)
+        projects, has_more, next_skip, scanned = await scraper.fetch_page(date_from, date_to, skip=skip)
         fetched = len(projects)
         for project in projects:
             try:
@@ -36,12 +37,13 @@ async def run_scan(db, bearer_token, date_from, date_to, skip=0):
         return {
             "fetched": fetched, "inserted": inserted, "updated": updated,
             "errors": errors, "has_more": False, "next_skip": skip,
-            "warning": str(e),
+            "scanned": scanned, "warning": str(e),
         }
 
     return {
         "fetched": fetched, "inserted": inserted, "updated": updated,
         "errors": errors, "has_more": has_more, "next_skip": next_skip,
+        "scanned": scanned,
     }
 
 
