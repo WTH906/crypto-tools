@@ -7,8 +7,9 @@ from bs4 import BeautifulSoup
 class ICOAnalyticsScraper:
     BASE_URL = "https://icoanalytics.org/deal-flow/"
     HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
     }
 
     async def fetch_page(self, date_from, date_to, page=1):
@@ -88,7 +89,7 @@ class ICOAnalyticsScraper:
             }
 
             stage_match = re.search(
-                r'(Pre-[Ss]eed|Seed|Pre-Series\s*[A-Z]|Series\s*[A-Z]|Strategic|'
+                r'(Pre-[Ss]eed|Seed|Pre-Series\s*[A-Z]|Series\s*[A-Z]|Strategic|Post-IPO|'
                 r'Undisclosed|Grant|M&A|Bridge|Debt|Private|Public\s*sale|Unknown|Extended\s*Seed)',
                 row_text, re.IGNORECASE
             )
@@ -106,7 +107,7 @@ class ICOAnalyticsScraper:
 
             raise_match = re.search(r'(?:Raised|raised)\s*([\d,]+)', row_text)
             if not raise_match:
-                nums = re.findall(r'\b(\d{5,})\b', row_text)
+                nums = re.findall(r'\b(\d{4,})\b', row_text)
                 for n in nums:
                     val = int(n)
                     if 10000 < val < 100_000_000_000:
@@ -140,14 +141,19 @@ class ICOAnalyticsScraper:
                     "Smart Contract Platform", "Data Service", "Media",
                     "Finance/Banking", "Tax & Accounting",
                 ]
-                row_lower = row_text.lower()
                 for cat in known_cats:
-                    if re.search(r'\b' + re.escape(cat.lower()) + r'\b', row_lower):
+                    if cat.lower() in row_text.lower():
                         tags.append(cat)
+
+                eco_matches = re.findall(r'(\w[\w\s]*?Ecosystem)', row_text)
+                tags.extend(eco_matches)
 
             if tags:
                 project["tagNames"] = list(dict.fromkeys(tags))
                 project["categoryName"] = tags[0]
+
+            if re.search(r'\bYes\b', row_text):
+                project["tagNames"].append("Tradable")
 
             fund_links = row.select('a[href*="/funds/"]')
             seen_funds = set()
@@ -179,6 +185,21 @@ class ICOAnalyticsScraper:
                         "id": fund_key, "key": fund_key, "name": fund_name,
                         "tier": None, "isLead": is_lead, "logo": logo,
                     })
+
+            invest_container = row.select_one(".investlist, .acomplist")
+            if invest_container:
+                plain_text = invest_container.get_text(" ", strip=True)
+                for name_chunk in re.findall(r'([A-Z][a-zA-Z\s\-\.]+)', plain_text):
+                    clean = name_chunk.strip()
+                    if clean and clean.lower() not in seen_funds and len(clean) > 2:
+                        if clean not in tags and clean not in ("Lead investor",):
+                            seen_funds.add(clean.lower())
+                            project["funds"].append({
+                                "id": clean.lower().replace(" ", "-"),
+                                "key": clean.lower().replace(" ", "-"),
+                                "name": clean, "tier": None,
+                                "isLead": False, "logo": None,
+                            })
 
             results.append(project)
 
