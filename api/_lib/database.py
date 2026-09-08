@@ -21,14 +21,18 @@ class Database:
 
     def _post(self, data):
         headers = {**self.headers, "Prefer": "return=representation"}
-        return httpx.post(self.table, headers=headers, json=data, timeout=15)
+        resp = httpx.post(self.table, headers=headers, json=data, timeout=15)
+        resp.raise_for_status()
+        return resp
 
     def _patch(self, key, data):
         headers = {**self.headers, "Prefer": "return=representation"}
-        return httpx.patch(
+        resp = httpx.patch(
             self.table, headers=headers, json=data,
             params={"key": f"eq.{key}"}, timeout=15,
         )
+        resp.raise_for_status()
+        return resp
 
     def upsert_project(self, data):
         now = datetime.now(timezone.utc).isoformat()
