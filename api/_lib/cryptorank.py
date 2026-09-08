@@ -19,11 +19,16 @@ class CryptoRankScraper:
     async def fetch_page(self, date_from, date_to, skip=0):
         dt_from = datetime.strptime(date_from, "%Y-%m-%d")
         dt_to = datetime.strptime(date_to, "%Y-%m-%d")
+        ts_from = int(dt_from.replace(tzinfo=timezone.utc).timestamp() * 1000)
+        ts_to = int(dt_to.replace(hour=23, minute=59, second=59, tzinfo=timezone.utc).timestamp() * 1000)
 
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             payload = {
                 "limit": self.PAGE_SIZE,
-                "filters": {},
+                "filters": {
+                    "dateFrom": ts_from,
+                    "dateTo": ts_to,
+                },
                 "skip": skip,
                 "sortingColumn": "date",
                 "sortingDirection": "DESC",
