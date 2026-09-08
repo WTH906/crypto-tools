@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Search, Plus, Upload, ExternalLink, Pencil, Trash2, X as XIcon } from 'lucide-react'
+import { Search, Plus, Upload, ExternalLink, Pencil, Trash2, Send, X as XIcon } from 'lucide-react'
 import Button from '../ui/Button'
 import DropdownMenu from '../ui/DropdownMenu'
 import EditProjectModal from '../modals/EditProjectModal'
@@ -160,7 +160,17 @@ export default function ResearchTab({ store }) {
             <div className="text-xs font-mono text-accent">
               {row.fundraising_amount || <span className="text-fg-subtle">—</span>}
             </div>
-            <div className="flex justify-end">
+            <div className="flex items-center justify-end gap-1">
+              {!row.in_working && (
+                <button
+                  onClick={() => onToggleAddToTracking(row)}
+                  disabled={busyId === row.id}
+                  title="Send to Tracking"
+                  className="p-1 text-fg-subtle hover:text-accent transition-colors disabled:opacity-40"
+                >
+                  <Send size={13} />
+                </button>
+              )}
               <DropdownMenu
                 items={[
                   {

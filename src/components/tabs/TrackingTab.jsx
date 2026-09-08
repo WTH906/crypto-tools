@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   Search,
   Plus,
@@ -219,9 +219,10 @@ export default function TrackingTab({ store }) {
               <div className="pr-3 text-xs text-fg-muted leading-relaxed line-clamp-3">
                 {row.notes || <span className="text-fg-subtle">—</span>}
               </div>
-              <div className="text-xs text-fg-muted font-mono">
-                {formatDate(row.last_interaction)}
-              </div>
+              <InlineDate
+                value={row.last_interaction}
+                onChange={(date) => updateTracking(row.id, { last_interaction: date || null })}
+              />
               <div className="flex justify-end">
                 <DropdownMenu
                   items={[
@@ -292,6 +293,49 @@ export default function TrackingTab({ store }) {
         onDelete={deleteStage}
       />
     </div>
+  )
+}
+
+function InlineDate({ value, onChange }) {
+  const ref = useRef(null)
+  const [editing, setEditing] = useState(false)
+
+  const handleClick = () => {
+    setEditing(true)
+    setTimeout(() => {
+      if (ref.current) {
+        ref.current.showPicker?.()
+        ref.current.focus()
+      }
+    }, 0)
+  }
+
+  const handleChange = (e) => {
+    onChange(e.target.value)
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={ref}
+        type="date"
+        defaultValue={value ? value.slice(0, 10) : ''}
+        onChange={handleChange}
+        onBlur={() => setEditing(false)}
+        className="!text-xs !py-0.5 !px-1 font-mono w-[120px]"
+      />
+    )
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      className="text-xs text-fg-muted font-mono hover:text-accent transition-colors cursor-pointer text-left"
+      title="Click to change date"
+    >
+      {formatDate(value)}
+    </button>
   )
 }
 
